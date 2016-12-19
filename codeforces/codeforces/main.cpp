@@ -3,116 +3,90 @@
 #include <unordered_set>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 using namespace std;
 
-class UnionFind{
-public:
-    vector<int> rank;
-    vector<int> pa;
-    vector<int> unionNum;
-    vector<int> edges;
-    
-    // Ini
-    UnionFind(int n) {
-        for (int i=0; i<n; ++i) {
-            rank.push_back(0);
-            pa.push_back(i);
-            edges.push_back(0);
-            unionNum.push_back(1);
-        }
-    }
-    
-    // Find the root
-    int root(int i) {
-        while (i != pa[i]) {
-            pa[i] = pa[pa[i]];
-            i = pa[i];
-        }
-        return i;
-    }
-    
-    // Judge the connectivity
-    bool isConnected(int x, int y) {
-        return root(x) == root(y);
-    }
-    
-    // Merge the sets
-    void merge(int x, int y) {
-        x = root(x);
-        y = root(y);
-        if (rank[x] > rank[y]) {
-            pa[y] = x;
-            edges[x] += 1;
-            edges[x] += edges[y];
-        } else {
-            pa[x] = y;
-            if (rank[x] == rank[y]) ++rank[y];
-            edges[y] += 1;
-            edges[y] += edges[x];
-        }
-    }
-};
-
-vector<int> ks;
-unordered_set<int> kk;
-
 int main() {
-    int n, m, k;
-    cin >> n >> m >> k;
-    UnionFind a(n);
-    for (int i=0; i<k; ++i) {
+    int n, k;
+    cin >> n >> k;
+    int status = 0;
+    int ans = 0;
+    int coldCounts = 0;
+    vector<int> whether(n);
+    int index = 0;
+    int size = n;
+    while (size--) {
         int temp;
         cin >> temp;
-        ks.push_back(temp-1);
-        kk.insert(temp-1);
-    }
-    for (int i=0; i<m; ++i) {
-        int e1, e2;
-        cin >> e1 >> e2;
-        if (!a.isConnected(e1-1, e2-1)) {
-            a.merge(e1-1, e2-1);
-        } else {
-            int r = a.root(e1-1);
-            ++a.edges[r];
+        whether[index++] = temp;
+        if (temp < 0) ++coldCounts;
+        
+        if (temp < 0 && status == 0) {
+            ++ans;
+            status = 1;
+        } else if (temp >= 0 && status == 1) {
+            ++ans;
+            status = 0;
         }
     }
-    
-    for (int i=0; i<n; ++i) {
-        int r = a.root(i);
-        if (i != r) {
-            ++a.unionNum[r];
+    if (coldCounts == 0) cout << 0 <<endl;
+    else if (k == n) cout << 1 << endl;
+    else if (coldCounts > k) cout << -1 << endl;
+    else {
+        int remain = k - coldCounts;
+        if (remain == 0) {
+            cout << ans << endl;
+            return 0;
         }
-    }
-    
-    
-    int maxIndex = ks[0];
-    int maxNum = a.unionNum[a.root(ks[0])];
-    
-    for (int i=1; i<k; ++i) {
-        int tempNum = a.unionNum[a.root(ks[i])];
-        if (tempNum > maxNum) {
-            maxNum = tempNum;
-            maxIndex = ks[i];
-        }
-    }
-    int ans = 0;
-    vector<bool> visited(n, false);
-    if (k > 0) {
-        for (int i=0; i<n; ++i) {
-            int r = a.root(i);
-            int r2 = a.root(maxIndex);
-            if (!visited[r] && r != r2 && kk.find(r) == kk.end()) {
-                ans += maxNum * a.unionNum[r];
-                visited[r] = true;
+        vector<int> next(n+1, -1);
+        whether.push_back(-1);
+        int lastIndex = -1;
+        for (int i=0; i<n+1; ++i) {
+            if (whether[i] >= 0) {
+                continue;
+            } else {
+                if (lastIndex == -1) {
+                    lastIndex = i;
+                } else {
+                    next[i] = i - lastIndex - 1;
+                    lastIndex = i;
+                }
             }
         }
+        int ans1 = ans, ans2 = ans;
+        int tempremain = remain;
+        if (next[n] > 0 && tempremain >= next[n]) {
+            tempremain -= next[n];
+            ans1 -= 1;
+            sort(next.begin(), next.end()-1);
+            for (int i=0; i<n; ++i) {
+                if (next[i] == -1 || next[i] == 0) {
+                    continue;
+                } else {
+                    if (tempremain >= next[i]) {
+                        ans1 = ans1 - 2;
+                        tempremain -= next[i];
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        sort(next.begin(), next.end()-1);
+        for (int i=0; i<n; ++i) {
+            if (next[i] == -1 || next[i] == 0) {
+                continue;
+            } else {
+                if (remain >= next[i]) {
+                    ans2 = ans2 - 2;
+                    remain -= next[i];
+                } else {
+                    break;
+                }
+            }
+        }
+        ans = min(ans1, ans2);
+        cout << ans << endl;
     }
-    for (int i=0; i<k; ++i) {
-        int r = a.root(ks[i]);
-        int cedges = a.edges[r];
-        int tedges = a.unionNum[r] * (a.unionNum[r]-1) / 2;
-        ans += tedges - cedges;
-    }
-    cout << ans << endl;
     return 0;
 }
